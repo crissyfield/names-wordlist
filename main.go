@@ -17,7 +17,7 @@ import (
 
 var (
 	AbstractIndexDE    = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
-	PersonDataRegExpDE = regexp.MustCompile("\\{\\{Personendaten")
+	PersonDataRegExpDE = regexp.MustCompile(`\{\{Personendaten\s+\|NAME=([^\|\}]+)`)
 )
 
 type WikipediaRevision struct {
@@ -128,12 +128,16 @@ func namesDict(cmd *cobra.Command, args []string) {
 				}
 
 				// Skip if no proper template
-				if PersonDataRegExpDE.FindString(p.Revision[0].Text) == "" {
+				sm := PersonDataRegExpDE.FindStringSubmatch(p.Revision[0].Text)
+
+				if sm == nil || sm[1] == "" {
 					continue
 				}
 
 				// Dump
-				fmt.Printf("%s => %d bytes\n", p.Title, len(p.Revision[0].Text))
+				name := strings.TrimSpace(sm[1])
+
+				fmt.Printf("%s => %d bytes\n", name, len(p.Revision[0].Text))
 			}
 		default:
 		}
