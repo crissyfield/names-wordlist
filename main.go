@@ -1,6 +1,12 @@
 package main
 
 import (
+	"compress/bzip2"
+	"encoding/xml"
+	"fmt"
+	"io"
+	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/fatih/color"
@@ -8,6 +14,25 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+var (
+	AbstractIndexDE    = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
+	PersonDataRegExpDE = regexp.MustCompile("\\{\\{Personendaten")
+)
+
+type WikipediaRevision struct {
+	ID       int    `xml:"id"`
+	ParentID int    `xml:"parentid"`
+	Text     string `xml:"text"`
+}
+
+type WikipediaPage struct {
+	Title     string               `xml:"title"`    // Title in text form. (Using spaces, not underscores; with namespace )
+	Namespace string               `xml:"ns"`       // Namespace in canonical form
+	ID        int                  `xml:"id"`       // Optional page ID number
+	Redirect  string               `xml:"redirect"` // Flag if the current revision is a redirect
+	Revision  []*WikipediaRevision `xml:"revision"` // Set of revisions
+}
 
 // main is the main entry point of the app.
 func main() {
@@ -64,5 +89,53 @@ func namesDict(cmd *cobra.Command, args []string) {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
+	}
+
+	// Download Wikipedia Dump
+	resp, err := http.Get(AbstractIndexDE)
+	if err != nil {
+		logrus.Fatalf("Unable to fetch abstract index: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	// Decompress Bzip2
+	decr := bzip2.NewReader(resp.Body)
+
+	// Streaming XML parsing
+	decoder := xml.NewDecoder(decr)
+	for {
+		token, err := decoder.Token()
+		if token == nil || err == io.EOF {
+			break
+		} else if err != nil {
+			logrus.Fatalf("Error decoding XML token: %w", err)
+		}
+
+		switch t := token.(type) {
+		case xml.StartElement:
+			if t.Name.Local == "page" {
+				// Decode element
+				var p WikipediaPage
+
+				if err = decoder.DecodeElement(&p, &t); err != nil {
+					continue
+				}
+
+				// Skip if no or empty revision
+				if len(p.Revision) == 0 || p.Revision[0] == nil {
+					continue
+				}
+
+				// Skip if no proper template
+				if PersonDataRegExpDE.FindString(p.Revision[0].Text) == "" {
+					continue
+				}
+
+				// Dump
+				fmt.Printf("%s => %d bytes\n", p.Title, len(p.Revision[0].Text))
+			}
+		default:
+		}
 	}
 }
