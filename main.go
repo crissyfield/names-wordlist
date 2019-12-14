@@ -16,8 +16,11 @@ import (
 )
 
 var (
-	AbstractIndexDE    = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
-	PersonDataRegExpDE = regexp.MustCompile(`\{\{Personendaten\s+\|NAME=([^\|\}]+)`)
+	AbstractIndexDE            = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
+	PersonDataTemplateRegExpDE = regexp.MustCompile(`(?i:\{\{personendaten([^\}]+)\}\})`)
+	TemplateFieldsRegExp       = regexp.MustCompile(`(?i:\s*([a-z]+)\s*=\s*(.+)\s*)`)
+	NameSeperatorRegExp        = regexp.MustCompile(`\s*,\s*`)
+	FirstNameSeperatorRegExp   = regexp.MustCompile(`[\t\n\f\r \-\.]`)
 )
 
 type WikipediaRevision struct {
@@ -115,7 +118,7 @@ func namesDict(cmd *cobra.Command, args []string) {
 		switch t := token.(type) {
 		case xml.StartElement:
 			if t.Name.Local == "page" {
-				// Decode element
+				// Decode <page> element
 				var p WikipediaPage
 
 				if err = decoder.DecodeElement(&p, &t); err != nil {
@@ -127,17 +130,35 @@ func namesDict(cmd *cobra.Command, args []string) {
 					continue
 				}
 
-				// Skip if no proper template
-				sm := PersonDataRegExpDE.FindStringSubmatch(p.Revision[0].Text)
+				// Iterate through all {{Persondata}} templates
+				templates := PersonDataTemplateRegExpDE.FindAllStringSubmatch(p.Revision[0].Text, -1)
+				for _, tmpl := range templates {
+					// Split into fields
+					for _, sub := range strings.Split(tmpl[1], "|") {
+						// Parse key/value of field
+						kv := TemplateFieldsRegExp.FindStringSubmatch(sub)
+						if kv == nil {
+							continue
+						}
 
-				if sm == nil || sm[1] == "" {
-					continue
+						switch strings.ToLower(kv[1]) {
+						case "name":
+							// Split last- and firstname
+							name := NameSeperatorRegExp.Split(kv[2], -1)
+							if len(name) < 2 {
+								continue
+							}
+
+							// Split multiple firstnames
+							firstname := FirstNameSeperatorRegExp.Split(name[1], -1)
+							if len(firstname) < 1 {
+								continue
+							}
+
+							fmt.Println(firstname[0])
+						}
+					}
 				}
-
-				// Dump
-				name := strings.TrimSpace(sm[1])
-
-				fmt.Printf("%s => %d bytes\n", name, len(p.Revision[0].Text))
 			}
 		default:
 		}
