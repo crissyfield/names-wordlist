@@ -190,10 +190,6 @@ func namesDict(cmd *cobra.Command, args []string) {
 			}
 		default:
 		}
-
-		if len(firstnameHist) > 10 {
-			break
-		}
 	}
 
 	// Sort and limit to given number
