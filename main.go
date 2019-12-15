@@ -73,7 +73,9 @@ func main() {
 	}
 
 	cmd.Flags().BoolP("verbose", "v", false, "write more")
-	cmd.Flags().StringP("dump-url", "u", "", "Overwrite default URL for given language")
+
+	cmd.Flags().StringP("dump-url", "u", "", "overwrite default URL for given language")
+	cmd.Flags().IntP("count", "c", 0, "take the top N names only (0 means 'all')")
 
 	// Viper config
 	viper.SetEnvPrefix("NAMES_DICT")
@@ -182,17 +184,23 @@ func namesDict(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// sort
-	tmp := make([]*FirstnameCount, 0, len(firstnameHist))
+	// Sort names
+	final := make([]*FirstnameCount, 0, len(firstnameHist))
 
 	for f, c := range firstnameHist {
-		tmp = append(tmp, &FirstnameCount{
+		final = append(final, &FirstnameCount{
 			Firstname: f,
 			Count:     c,
 		})
 	}
 
-	sort.Sort(FirstnameCounts(tmp))
+	sort.Sort(FirstnameCounts(final))
 
-	fmt.Println(tmp[0:100])
+	// Limit by given number
+	if cnt := viper.GetInt("count"); cnt > 0 {
+		final = final[0:cnt]
+	}
+
+	// ...
+	fmt.Println(final)
 }
