@@ -18,8 +18,7 @@ import (
 )
 
 var (
-	// AbstractIndexDE            = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
-	AbstractIndexDE            = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles1.xml-p1p262467.bz2"
+	AbstractIndexDE            = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
 	PersonDataTemplateRegExpDE = regexp.MustCompile(`(?i:\{\{personendaten([^\}]+)\}\})`)
 	TemplateFieldsRegExp       = regexp.MustCompile(`(?i:\s*([a-z]+)\s*=[\t\n\f\r '"ʿ]*(.+)[\t\n\f\r '"ʿ]*)`)
 	NameSeperatorRegExp        = regexp.MustCompile(`\s*,\s*`)
@@ -74,14 +73,7 @@ func main() {
 	}
 
 	cmd.Flags().BoolP("verbose", "v", false, "write more")
-
-	//	cmd.Flags().StringP("listen", "l", "0.0.0.0:80", "IP and port on which the server will listen")
-	//	cmd.Flags().StringP("assets", "a", "", "Path to static web assets")
-	//
-	//	cmd.Flags().StringP("db-host", "H", "localhost", "MySQL host")
-	//	cmd.Flags().StringP("db-database", "d", "postfix", "MySQL database")
-	//	cmd.Flags().StringP("db-username", "u", "postfix", "MySQL username")
-	//	cmd.Flags().StringP("db-password", "p", "", "MySQL password")
+	cmd.Flags().StringP("dump-url", "u", "", "Overwrite default URL for given language")
 
 	// Viper config
 	viper.SetEnvPrefix("NAMES_DICT")
@@ -111,7 +103,12 @@ func namesDict(cmd *cobra.Command, args []string) {
 	}
 
 	// Download Wikipedia Dump
-	resp, err := http.Get(AbstractIndexDE)
+	dumpUrl := viper.GetString("dump-url")
+	if dumpUrl == "" {
+		dumpUrl = AbstractIndexDE
+	}
+
+	resp, err := http.Get(dumpUrl)
 	if err != nil {
 		logrus.Errorf("Unable to fetch abstract index: %w", err)
 		os.Exit(1)
