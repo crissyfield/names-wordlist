@@ -236,9 +236,27 @@ func namesDict(cmd *cobra.Command, args []string) {
 
 	// Generate output
 	for _, f := range final {
+		// Lower case
+		firstname := strings.ToLower(f.Firstname)
 		for _, d := range digitCombs {
 			for _, c := range charCombs {
-				fmt.Println(f.Firstname + d + c)
+				fmt.Println(firstname + d + c)
+			}
+		}
+
+		// Upper case
+		firstname = strings.ToUpper(f.Firstname)
+		for _, d := range digitCombs {
+			for _, c := range charCombs {
+				fmt.Println(firstname + d + c)
+			}
+		}
+
+		// Title case
+		firstname = strings.Title(f.Firstname)
+		for _, d := range digitCombs {
+			for _, c := range charCombs {
+				fmt.Println(firstname + d + c)
 			}
 		}
 	}
