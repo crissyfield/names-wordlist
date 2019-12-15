@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
@@ -97,7 +98,8 @@ func namesDict(cmd *cobra.Command, args []string) {
 	// Download Wikipedia Dump
 	resp, err := http.Get(AbstractIndexDE)
 	if err != nil {
-		logrus.Fatalf("Unable to fetch abstract index: %w", err)
+		logrus.Errorf("Unable to fetch abstract index: %w", err)
+		os.Exit(1)
 	}
 
 	defer resp.Body.Close()
@@ -112,7 +114,8 @@ func namesDict(cmd *cobra.Command, args []string) {
 		if token == nil || err == io.EOF {
 			break
 		} else if err != nil {
-			logrus.Fatalf("Error decoding XML token: %w", err)
+			logrus.Errorf("Error decoding XML token: %w", err)
+			os.Exit(1)
 		}
 
 		switch t := token.(type) {
