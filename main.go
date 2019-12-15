@@ -25,6 +25,7 @@ var (
 	FirstNameSeperatorRegExp   = regexp.MustCompile(`[\t\n\f\r \-\.'"ʿ]`)
 )
 
+// Wikipedia XML
 type WikipediaRevision struct {
 	ID       int    `xml:"id"`
 	ParentID int    `xml:"parentid"`
@@ -39,6 +40,7 @@ type WikipediaPage struct {
 	Revision  []*WikipediaRevision `xml:"revision"` // Set of revisions
 }
 
+// Firstname + Count is used for sorting
 type FirstnameCount struct {
 	Firstname string // Firstname
 	Count     int    // Count
@@ -52,7 +54,7 @@ func (m FirstnameCounts) Len() int           { return len(m) }
 func (m FirstnameCounts) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 func (m FirstnameCounts) Less(i, j int) bool { return m[i].Count > m[j].Count }
 
-// main is the main entry point of the app.
+// Main entry point
 func main() {
 	// Print banner
 	color.NoColor = false
