@@ -17,12 +17,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	AbstractIndexDE   = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
+	SpecialCharacters = "!$@_"
+)
+
 var (
-	AbstractIndexDE            = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
 	PersonDataTemplateRegExpDE = regexp.MustCompile(`(?i:\{\{personendaten([^\}]+)\}\})`)
 	TemplateFieldsRegExp       = regexp.MustCompile(`(?i:\s*([a-z]+)\s*=[\t\n\f\r '"ʿ]*(.+)[\t\n\f\r '"ʿ]*)`)
 	NameSeperatorRegExp        = regexp.MustCompile(`\s*,\s*`)
-	FirstNameSeperatorRegExp   = regexp.MustCompile(`[\t\n\f\r \-\.'"ʿ]`)
+	FirstnameSeperatorRegExp   = regexp.MustCompile(`[\t\n\f\r \-\.'"ʿ]`)
 )
 
 // Wikipedia XML
@@ -33,7 +37,7 @@ type WikipediaRevision struct {
 }
 
 type WikipediaPage struct {
-	Title     string               `xml:"title"`    // Title in text form. (Using spaces, not underscores; with namespace )
+	Title     string               `xml:"title"`    // Title in text form. (Using spaces, not underscores; with namespace)
 	Namespace string               `xml:"ns"`       // Namespace in canonical form
 	ID        int                  `xml:"id"`       // Optional page ID number
 	Redirect  string               `xml:"redirect"` // Flag if the current revision is a redirect
@@ -78,6 +82,8 @@ func main() {
 
 	cmd.Flags().StringP("dump-url", "u", "", "overwrite default URL for given language")
 	cmd.Flags().IntP("count", "c", 0, "take the top N names only (0 means 'all')")
+	cmd.Flags().IntP("digits", "d", 4, "append up to N digits after the name")
+	cmd.Flags().StringP("special-chars", "s", SpecialCharacters, "append special characters from this set")
 
 	// Viper config
 	viper.SetEnvPrefix("NAMES_DICT")
@@ -171,7 +177,7 @@ func namesDict(cmd *cobra.Command, args []string) {
 							}
 
 							// Split multiple firstnames
-							firstname := FirstNameSeperatorRegExp.Split(name[1], -1)
+							firstname := FirstnameSeperatorRegExp.Split(name[1], -1)
 							if len(firstname) < 1 {
 								continue
 							}
@@ -184,9 +190,13 @@ func namesDict(cmd *cobra.Command, args []string) {
 			}
 		default:
 		}
+
+		if len(firstnameHist) > 10 {
+			break
+		}
 	}
 
-	// Sort names
+	// Sort and limit to given number
 	final := make([]*FirstnameCount, 0, len(firstnameHist))
 
 	for f, c := range firstnameHist {
@@ -198,11 +208,38 @@ func namesDict(cmd *cobra.Command, args []string) {
 
 	sort.Sort(FirstnameCounts(final))
 
-	// Limit by given number
 	if cnt := viper.GetInt("count"); cnt > 0 {
 		final = final[0:cnt]
 	}
 
-	// ...
-	fmt.Println(final)
+	// Create number combinations
+	digits := viper.GetInt("digits")
+	digitCombs := []string{""}
+
+	maxNumber := 1
+	for d := 0; d < digits; d++ {
+		maxNumber *= 10
+		format := fmt.Sprintf("%%0%dd", d+1)
+
+		for i := 0; i < maxNumber; i++ {
+			digitCombs = append(digitCombs, fmt.Sprintf(format, i))
+		}
+	}
+
+	// Create special character combinations
+	specialChars := viper.GetString("special-chars")
+	charCombs := []string{""}
+
+	for _, c := range specialChars {
+		charCombs = append(charCombs, string(c))
+	}
+
+	// Generate output
+	for _, f := range final {
+		for _, d := range digitCombs {
+			for _, c := range charCombs {
+				fmt.Println(f.Firstname + d + c)
+			}
+		}
+	}
 }
