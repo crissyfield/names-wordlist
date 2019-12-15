@@ -57,13 +57,13 @@ func (m FirstnameCounts) Less(i, j int) bool { return m[i].Count > m[j].Count }
 // Main entry point
 func main() {
 	// Print banner
-	color.NoColor = false
+	logoClr := color.New(color.FgHiCyan)
 
-	color.HiCyan("                                          __ __      __    ")
-	color.HiCyan(".-.--..---.-.--.-.--.-----.-----._____.--|  |__|----|  |_  ")
-	color.HiCyan("|  .  |  -  |  . .  |  -__|__ --|_____|  -  |  |  --|   _| ")
-	color.HiCyan("|__|__|___._|__|-|__|_____|_____|     |_____|__|____|_____|")
-	color.HiCyan("                                                           ")
+	logoClr.Fprintln(os.Stderr, "                                          __ __      __    ")
+	logoClr.Fprintln(os.Stderr, ".-.--..---.-.--.-.--.-----.-----._____.--|  |__|----|  |_  ")
+	logoClr.Fprintln(os.Stderr, "|  .  |  -  |  . .  |  -__|__ --|_____|  -  |  |  --|   _| ")
+	logoClr.Fprintln(os.Stderr, "|__|__|___._|__|-|__|_____|_____|     |_____|__|____|_____|")
+	logoClr.Fprintln(os.Stderr, "                                                           ")
 
 	// Cobra command
 	cmd := &cobra.Command{
