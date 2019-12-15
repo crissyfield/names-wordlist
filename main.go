@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/fatih/color"
@@ -17,11 +18,12 @@ import (
 )
 
 var (
-	AbstractIndexDE            = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
+	// AbstractIndexDE            = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles.xml.bz2"
+	AbstractIndexDE            = "https://dumps.wikimedia.org/dewiki/latest/dewiki-latest-pages-articles1.xml-p1p262467.bz2"
 	PersonDataTemplateRegExpDE = regexp.MustCompile(`(?i:\{\{personendaten([^\}]+)\}\})`)
-	TemplateFieldsRegExp       = regexp.MustCompile(`(?i:\s*([a-z]+)\s*=\s*(.+)\s*)`)
+	TemplateFieldsRegExp       = regexp.MustCompile(`(?i:\s*([a-z]+)\s*=[\t\n\f\r '"ʿ]*(.+)[\t\n\f\r '"ʿ]*)`)
 	NameSeperatorRegExp        = regexp.MustCompile(`\s*,\s*`)
-	FirstNameSeperatorRegExp   = regexp.MustCompile(`[\t\n\f\r \-\.]`)
+	FirstNameSeperatorRegExp   = regexp.MustCompile(`[\t\n\f\r \-\.'"ʿ]`)
 )
 
 type WikipediaRevision struct {
@@ -37,6 +39,19 @@ type WikipediaPage struct {
 	Redirect  string               `xml:"redirect"` // Flag if the current revision is a redirect
 	Revision  []*WikipediaRevision `xml:"revision"` // Set of revisions
 }
+
+type FirstnameCount struct {
+	Firstname string // Firstname
+	Count     int    // Count
+}
+
+func (m FirstnameCount) String() string { return fmt.Sprintf("[%d : %s]", m.Count, m.Firstname) }
+
+type FirstnameCounts []*FirstnameCount
+
+func (m FirstnameCounts) Len() int           { return len(m) }
+func (m FirstnameCounts) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m FirstnameCounts) Less(i, j int) bool { return m[i].Count > m[j].Count }
 
 // main is the main entry point of the app.
 func main() {
@@ -107,7 +122,9 @@ func namesDict(cmd *cobra.Command, args []string) {
 	// Decompress Bzip2
 	decr := bzip2.NewReader(resp.Body)
 
-	// Streaming XML parsing
+	// Streamed XML parsing
+	firstnameHist := make(map[string]int)
+
 	decoder := xml.NewDecoder(decr)
 	for {
 		token, err := decoder.Token()
@@ -158,7 +175,8 @@ func namesDict(cmd *cobra.Command, args []string) {
 								continue
 							}
 
-							fmt.Println(firstname[0])
+							// Increment usage
+							firstnameHist[firstname[0]] += 1
 						}
 					}
 				}
@@ -166,4 +184,18 @@ func namesDict(cmd *cobra.Command, args []string) {
 		default:
 		}
 	}
+
+	// sort
+	tmp := make([]*FirstnameCount, 0, len(firstnameHist))
+
+	for f, c := range firstnameHist {
+		tmp = append(tmp, &FirstnameCount{
+			Firstname: f,
+			Count:     c,
+		})
+	}
+
+	sort.Sort(FirstnameCounts(tmp))
+
+	fmt.Println(tmp[0:100])
 }
