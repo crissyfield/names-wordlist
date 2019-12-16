@@ -115,8 +115,31 @@ func namesDict(cmd *cobra.Command, args []string) {
 	// Decompress Bzip2
 	decr := bzip2.NewReader(resp.Body)
 
+	// Open output file
+	out, err := os.Create(args[0])
+	if err != nil {
+		fmt.Errorf("Unable to create output file: %w", err)
+		os.Exit(1)
+	}
+
+	defer out.Close()
+
+	// Spin off output routne
+	ch := make(chan string)
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+	go OutputRoutine(
+		out,
+		viper.GetInt("digits"),
+		viper.GetString("special-chars"),
+		ch,
+		wg,
+	)
+
 	// Streamed XML parsing
 	firstnameHist := make(map[string]int)
+	cnt := viper.GetInt("count")
 
 	decoder := xml.NewDecoder(decr)
 	for {
@@ -170,6 +193,11 @@ func namesDict(cmd *cobra.Command, args []string) {
 
 							// Increment usage
 							firstnameHist[firstname[0]] += 1
+
+							// Output
+							if firstnameHist[firstname[0]] == cnt {
+								ch <- firstname[0]
+							}
 						}
 					}
 				}
@@ -182,40 +210,7 @@ func namesDict(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Open output file
-	out, err := os.Create(args[0])
-	if err != nil {
-		fmt.Errorf("Unable to create output file: %w", err)
-		os.Exit(1)
-	}
-
-	defer out.Close()
-
-	// Create communication object
-	ch := make(chan string)
-	wg := &sync.WaitGroup{}
-
-	// Spin of routine
-	wg.Add(1)
-
-	go OutputRoutine(
-		out,
-		viper.GetInt("digits"),
-		viper.GetString("special-chars"),
-		ch,
-		wg,
-	)
-
-	cnt := viper.GetInt("count")
-
-	for f, c := range firstnameHist {
-		if c < cnt {
-			continue
-		}
-
-		ch <- f
-	}
-
+	// Clean up output go routine
 	close(ch)
 	wg.Wait()
 }
