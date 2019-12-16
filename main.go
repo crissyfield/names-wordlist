@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/fatih/color"
@@ -44,20 +43,6 @@ type WikipediaPage struct {
 	Revision  []*WikipediaRevision `xml:"revision"` // Set of revisions
 }
 
-// Firstname + Count is used for sorting
-type FirstnameCount struct {
-	Firstname string // Firstname
-	Count     int    // Count
-}
-
-func (m FirstnameCount) String() string { return fmt.Sprintf("[%d : %s]", m.Count, m.Firstname) }
-
-type FirstnameCounts []*FirstnameCount
-
-func (m FirstnameCounts) Len() int           { return len(m) }
-func (m FirstnameCounts) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
-func (m FirstnameCounts) Less(i, j int) bool { return m[i].Count > m[j].Count }
-
 // Main entry point
 func main() {
 	// Print banner
@@ -81,7 +66,7 @@ func main() {
 	cmd.Flags().BoolP("verbose", "v", false, "write more")
 
 	cmd.Flags().StringP("dump-url", "u", "", "overwrite default URL for given language")
-	cmd.Flags().IntP("count", "c", 0, "take the top N names only (0 means 'all')")
+	cmd.Flags().IntP("count", "c", 1, "ignore names with less than N occurences")
 	cmd.Flags().IntP("digits", "d", 4, "append up to N digits after the name")
 	cmd.Flags().StringP("special-chars", "s", SpecialCharacters, "append special characters from this set")
 
@@ -203,22 +188,6 @@ func namesDict(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Sort and limit to given number
-	final := make([]*FirstnameCount, 0, len(firstnameHist))
-
-	for f, c := range firstnameHist {
-		final = append(final, &FirstnameCount{
-			Firstname: f,
-			Count:     c,
-		})
-	}
-
-	sort.Sort(FirstnameCounts(final))
-
-	if cnt := viper.GetInt("count"); cnt > 0 {
-		final = final[0:cnt]
-	}
-
 	// Create number combinations
 	digits := viper.GetInt("digits")
 	digitCombs := []string{""}
@@ -242,11 +211,18 @@ func namesDict(cmd *cobra.Command, args []string) {
 	}
 
 	// Generate output
-	for _, f := range final {
+	cnt := viper.GetInt("count")
+
+	for f, c := range firstnameHist {
+		// Skip if not enough occurences
+		if c < cnt {
+			continue
+		}
+
 		// Lower case
-		lwr := strings.ToLower(f.Firstname)
-		upr := strings.ToUpper(f.Firstname)
-		ttl := strings.Title(f.Firstname)
+		lwr := strings.ToLower(f)
+		upr := strings.ToUpper(f)
+		ttl := strings.Title(f)
 
 		for _, d := range digitCombs {
 			for _, c := range charCombs {
