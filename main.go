@@ -148,7 +148,7 @@ func namesDict(cmd *cobra.Command, args []string) {
 		mpb.AppendDecorators(
 			decor.Percentage(),
 			decor.Name(" | ETA: "),
-			decor.EwmaETA(decor.ET_STYLE_HHMMSS, 90),
+			decor.EwmaETA(decor.ET_STYLE_HHMMSS, 64),
 		),
 	)
 
@@ -167,7 +167,7 @@ func namesDict(cmd *cobra.Command, args []string) {
 	defer out.Close()
 
 	// Spin off output routne
-	ch := make(chan string)
+	ch := make(chan string, 100)
 	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
