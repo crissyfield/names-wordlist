@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/sirupsen/logrus"
@@ -97,13 +98,6 @@ func namesDict(cmd *cobra.Command, args []string) {
 		logrus.SetLevel(logrus.InfoLevel)
 	}
 
-	// Open output file
-	out, err := os.Create(args[0])
-	if err != nil {
-		logrus.Errorf("Unable to create output file: %w", err)
-		os.Exit(1)
-	}
-
 	// Download Wikipedia Dump
 	dumpUrl := viper.GetString("dump-url")
 	if dumpUrl == "" {
@@ -188,8 +182,47 @@ func namesDict(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	// Open output file
+	out, err := os.Create(args[0])
+	if err != nil {
+		fmt.Errorf("Unable to create output file: %w", err)
+		os.Exit(1)
+	}
+
+	defer out.Close()
+
+	// Create communication object
+	ch := make(chan string)
+	wg := &sync.WaitGroup{}
+
+	// Spin of routine
+	wg.Add(1)
+
+	go OutputRoutine(
+		out,
+		viper.GetInt("digits"),
+		viper.GetString("special-chars"),
+		ch,
+		wg,
+	)
+
+	cnt := viper.GetInt("count")
+
+	for f, c := range firstnameHist {
+		if c < cnt {
+			continue
+		}
+
+		ch <- f
+	}
+
+	close(ch)
+	wg.Wait()
+}
+
+// ...
+func OutputRoutine(w io.StringWriter, digits int, specialChars string, ch chan string, wg *sync.WaitGroup) {
 	// Create number combinations
-	digits := viper.GetInt("digits")
 	digitCombs := []string{""}
 
 	maxNumber := 1
@@ -203,7 +236,6 @@ func namesDict(cmd *cobra.Command, args []string) {
 	}
 
 	// Create special character combinations
-	specialChars := viper.GetString("special-chars")
 	charCombs := []string{""}
 
 	for _, c := range specialChars {
@@ -211,23 +243,18 @@ func namesDict(cmd *cobra.Command, args []string) {
 	}
 
 	// Generate output
-	cnt := viper.GetInt("count")
-
-	for f, c := range firstnameHist {
-		// Skip if not enough occurences
-		if c < cnt {
-			continue
-		}
-
+	for name := range ch {
 		// Lower case
-		lwr := strings.ToLower(f)
-		upr := strings.ToUpper(f)
-		ttl := strings.Title(f)
+		lwr := strings.ToLower(name)
+		upr := strings.ToUpper(name)
+		ttl := strings.Title(name)
 
 		for _, d := range digitCombs {
 			for _, c := range charCombs {
-				out.WriteString(lwr + d + c + "\n" + upr + d + c + "\n" + ttl + d + c + "\n")
+				w.WriteString(lwr + d + c + "\n" + upr + d + c + "\n" + ttl + d + c + "\n")
 			}
 		}
 	}
+
+	wg.Done()
 }
