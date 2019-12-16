@@ -73,7 +73,7 @@ func main() {
 	cmd := &cobra.Command{
 		Use:     "names-dict",
 		Long:    "Create a password dictionary based on names.",
-		Args:    cobra.NoArgs,
+		Args:    cobra.ExactArgs(1),
 		Version: "0.0.1",
 		Run:     namesDict,
 	}
@@ -110,6 +110,13 @@ func namesDict(cmd *cobra.Command, args []string) {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
+	}
+
+	// Open output file
+	out, err := os.Create(args[0])
+	if err != nil {
+		logrus.Errorf("Unable to create output file: %w", err)
+		os.Exit(1)
 	}
 
 	// Download Wikipedia Dump
@@ -190,6 +197,10 @@ func namesDict(cmd *cobra.Command, args []string) {
 			}
 		default:
 		}
+
+		if len(firstnameHist) >= 50 {
+			break
+		}
 	}
 
 	// Sort and limit to given number
@@ -233,26 +244,17 @@ func namesDict(cmd *cobra.Command, args []string) {
 	// Generate output
 	for _, f := range final {
 		// Lower case
-		firstname := strings.ToLower(f.Firstname)
-		for _, d := range digitCombs {
-			for _, c := range charCombs {
-				fmt.Println(firstname + d + c)
-			}
-		}
+		lwr := strings.ToLower(f.Firstname)
+		upr := strings.ToUpper(f.Firstname)
+		ttl := strings.Title(f.Firstname)
 
-		// Upper case
-		firstname = strings.ToUpper(f.Firstname)
 		for _, d := range digitCombs {
 			for _, c := range charCombs {
-				fmt.Println(firstname + d + c)
-			}
-		}
-
-		// Title case
-		firstname = strings.Title(f.Firstname)
-		for _, d := range digitCombs {
-			for _, c := range charCombs {
-				fmt.Println(firstname + d + c)
+				fmt.Fprintf(out, "%s\n%s\n%s\n",
+					lwr+d+c,
+					upr+d+c,
+					ttl+d+c,
+				)
 			}
 		}
 	}
