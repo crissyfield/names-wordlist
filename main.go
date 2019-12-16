@@ -250,11 +250,7 @@ func namesDict(cmd *cobra.Command, args []string) {
 
 		for _, d := range digitCombs {
 			for _, c := range charCombs {
-				fmt.Fprintf(out, "%s\n%s\n%s\n",
-					lwr+d+c,
-					upr+d+c,
-					ttl+d+c,
-				)
+				out.WriteString(lwr + d + c + "\n" + upr + d + c + "\n" + ttl + d + c + "\n")
 			}
 		}
 	}
