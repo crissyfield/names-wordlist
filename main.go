@@ -204,10 +204,6 @@ func namesDict(cmd *cobra.Command, args []string) {
 			}
 		default:
 		}
-
-		if len(firstnameHist) >= 50 {
-			break
-		}
 	}
 
 	// Clean up output go routine
@@ -217,6 +213,8 @@ func namesDict(cmd *cobra.Command, args []string) {
 
 // ...
 func OutputRoutine(w io.StringWriter, digits int, specialChars string, ch chan string, wg *sync.WaitGroup) {
+	wg.Done()
+
 	// Create number combinations
 	digitCombs := []string{""}
 
@@ -250,6 +248,4 @@ func OutputRoutine(w io.StringWriter, digits int, specialChars string, ch chan s
 			}
 		}
 	}
-
-	wg.Done()
 }
