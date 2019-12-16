@@ -10,11 +10,14 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/vbauerster/mpb/v4"
+	"github.com/vbauerster/mpb/v4/decor"
 )
 
 const (
@@ -28,6 +31,31 @@ var (
 	NameSeperatorRegExp        = regexp.MustCompile(`\s*,\s*`)
 	FirstnameSeperatorRegExp   = regexp.MustCompile(`[\t\n\f\r \-\.'"ʿ]`)
 )
+
+// ...
+type ProgressReader struct {
+	bar    *mpb.Bar  // Progress bar
+	reader io.Reader // Source reader
+	prev   time.Time // Last time
+}
+
+func NewProgressReader(b *mpb.Bar, r io.Reader) *ProgressReader {
+	return &ProgressReader{
+		bar:    b,
+		reader: r,
+		prev:   time.Now(),
+	}
+}
+
+func (m *ProgressReader) Read(p []byte) (int, error) {
+	n, err := m.reader.Read(p)
+
+	next := time.Now()
+	m.bar.IncrInt64(int64(n), next.Sub(m.prev))
+	m.prev = next
+
+	return n, err
+}
 
 // Wikipedia XML
 type WikipediaRevision struct {
@@ -112,8 +140,22 @@ func namesDict(cmd *cobra.Command, args []string) {
 
 	defer resp.Body.Close()
 
+	// Show progress
+	p := mpb.New()
+
+	bar := p.AddBar(resp.ContentLength,
+		mpb.PrependDecorators(decor.CountersKibiByte("% .2f / % .2f")),
+		mpb.AppendDecorators(
+			decor.Percentage(),
+			decor.Name(" | ETA: "),
+			decor.EwmaETA(decor.ET_STYLE_HHMMSS, 90),
+		),
+	)
+
+	pr := NewProgressReader(bar, resp.Body)
+
 	// Decompress Bzip2
-	decr := bzip2.NewReader(resp.Body)
+	decr := bzip2.NewReader(pr)
 
 	// Open output file
 	out, err := os.Create(args[0])
