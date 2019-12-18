@@ -77,19 +77,19 @@ func main() {
 	// Print banner
 	logoClr := color.New(color.FgHiCyan)
 
-	logoClr.Fprintln(os.Stderr, "                                          __ __      __    ")
-	logoClr.Fprintln(os.Stderr, ".-.--..---.-.--.-.--.-----.-----._____.--|  |__|----|  |_  ")
-	logoClr.Fprintln(os.Stderr, "|  .  |  -  |  . .  |  -__|__ --|_____|  -  |  |  --|   _| ")
-	logoClr.Fprintln(os.Stderr, "|__|__|___._|__|-|__|_____|_____|     |_____|__|____|_____|")
-	logoClr.Fprintln(os.Stderr, "                                                           ")
+	logoClr.Fprintln(os.Stderr, "                                                              __ __ __       __    ")
+	logoClr.Fprintln(os.Stderr, ".-.--..---.-.--.-.--.-----.-----._____.--._.--.-----.--.--.--|  |  |__|-----|  |_  ")
+	logoClr.Fprintln(os.Stderr, "|  .  |  -  |  . .  |  -__|__ --|_____|  | |  |  -  |  .__|  -  |  |  |__ --|   _| ")
+	logoClr.Fprintln(os.Stderr, "|__|__|___._|__|-|__|_____|_____|     |___.___|_____|__|  |_____|__|__|_____|_____|")
+	logoClr.Fprintln(os.Stderr, "                                                                                   ")
 
 	// Cobra command
 	cmd := &cobra.Command{
-		Use:     "names-dict",
-		Long:    "Create a password dictionary based on names.",
+		Use:     "names-wordlist",
+		Long:    "Create wordlists based on Wikipedia person data.",
 		Args:    cobra.ExactArgs(1),
 		Version: "0.0.1",
-		Run:     namesDict,
+		Run:     namesWordlist,
 	}
 
 	cmd.Flags().BoolP("verbose", "v", false, "write more")
@@ -100,15 +100,15 @@ func main() {
 	cmd.Flags().StringP("special-chars", "s", SpecialCharacters, "append special characters from this set")
 
 	// Viper config
-	viper.SetEnvPrefix("NAMES_DICT")
+	viper.SetEnvPrefix("NAMES_WORDLIST")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 
 	viper.BindPFlags(cmd.Flags())
 
 	viper.SetConfigName("config")
-	viper.AddConfigPath("/etc/names-dict")
-	viper.AddConfigPath("$HOME/.config/names-dict")
+	viper.AddConfigPath("/etc/names-wordlist")
+	viper.AddConfigPath("$HOME/.config/names-wordlist")
 	viper.AddConfigPath(".")
 
 	viper.ReadInConfig()
@@ -118,7 +118,7 @@ func main() {
 }
 
 // aykroyd is called if the CLI interfaces has been satisfied.
-func namesDict(cmd *cobra.Command, args []string) {
+func namesWordlist(cmd *cobra.Command, args []string) {
 	// Set logging level
 	if viper.GetBool("verbose") {
 		logrus.SetLevel(logrus.DebugLevel)
