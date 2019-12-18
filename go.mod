@@ -1,4 +1,4 @@
-module gitlab.crissyfield.de/crissyfield/names-dict
+module github.com/crissyfield/names-wordlist
 
 go 1.13
 
