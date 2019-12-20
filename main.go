@@ -88,7 +88,7 @@ func main() {
 		Use:     "names-wordlist",
 		Long:    "Create wordlists based on Wikipedia person data.",
 		Args:    cobra.ExactArgs(1),
-		Version: "0.0.1",
+		Version: "1.0.0",
 		Run:     namesWordlist,
 	}
 
